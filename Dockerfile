@@ -1,18 +1,15 @@
 # Use an official Python runtime based on Debian 12 "bookworm"
 FROM python:3.12-slim-bookworm
 
-# Add the wagtail user
+# Add wagtail user
 RUN useradd wagtail
 
-# Render dynamically assigns a PORT. Expose 10000 just for documentation.
-EXPOSE 10000
-
-# Environment variables
+# Render will provide PORT dynamically (default 10000)
 ENV PYTHONUNBUFFERED=1 \
     PORT=10000 \
     DJANGO_SETTINGS_MODULE=mysite.settings.production
 
-# Install dependencies
+# Install dependencies for Django/Wagtail
 RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -22,7 +19,7 @@ RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-r
     libwebp-dev \
  && rm -rf /var/lib/apt/lists/*
 
-# Install application server
+# Install server packages
 RUN pip install "gunicorn==23.0.0" uvicorn
 
 # Install project requirements
@@ -32,32 +29,29 @@ RUN pip install -r /requirements.txt
 # Set working directory
 WORKDIR /app
 
-# Make sure wagtail owns this directory (needed for SQLite and static files)
+# Ensure wagtail user owns this folder
 RUN chown wagtail:wagtail /app
 
-# Copy project files
+# Copy project
 COPY --chown=wagtail:wagtail . .
 
 # Switch to wagtail user
 USER wagtail
 
-# Collect static
+# Collect static files
 RUN python manage.py collectstatic --noinput --clear
 
-# Automatically create a superuser if none exists
-RUN python - <<'EOF'
-from django.contrib.auth import get_user_model
-User = get_user_model()
-if not User.objects.filter(username="admin").exists():
-    User.objects.create_superuser("admin", "admin@example.com", "Admin@123")
-    print("Superuser created: admin / Admin@123")
-else:
-    print("Superuser already exists")
-EOF
+# --------------------------
+# ✔ SUPERUSER CREATION MOVED INTO CMD
+# --------------------------
 
 # Runtime command:
-# 1. Migrate database
-# 2. Start ASGI server using Gunicorn + Uvicorn worker
+# 1. migrate
+# 2. create superuser if missing
+# 3. run server
 CMD set -xe; \
     python manage.py migrate --noinput; \
-    gunicorn mysite.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); \
+        User.objects.filter(username='admin').exists() or \
+        User.objects.create_superuser('admin','admin@example.com','Admin@123')"; \
+    gunicorn mysite.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}
