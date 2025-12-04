@@ -1,0 +1,193 @@
+{% extends "wagtailadmin/base.html" %}
+{% load static %}
+
+{% block titletag %}Editor Stats Dashboard{% endblock %}
+
+{% block content %}
+<div class="nice-padding">
+
+    <h1 class="w-text">📊 Editor Stats Dashboard</h1>
+
+    <!-- Filters -->
+    <form method="get" class="filter-panel">
+        <div class="filter-row">
+            <label>Author:</label>
+            <select name="author">
+                <option value="">All</option>
+                {% for user in authors %}
+                    <option value="{{ user.id }}" {% if request.GET.author == user.id|stringformat:"s" %}selected{% endif %}>
+                        {{ user.username }}
+                    </option>
+                {% endfor %}
+            </select>
+
+            <label>Date Range:</label>
+            <input type="date" name="start" value="{{ request.GET.start }}">
+            <input type="date" name="end" value="{{ request.GET.end }}">
+
+            <button class="button button-primary" type="submit">Filter</button>
+        </div>
+    </form>
+
+    <!-- KPI CARDS -->
+    <div class="grid">
+        <div class="card">
+            <h3>Total Drafts</h3>
+            <p>{{ total_drafts }}</p>
+        </div>
+        <div class="card">
+            <h3>Published</h3>
+            <p>{{ total_published }}</p>
+        </div>
+        <div class="card">
+            <h3>Scheduled</h3>
+            <p>{{ scheduled }}</p>
+        </div>
+        <div class="card">
+            <h3>Stale Pages</h3>
+            <p>{{ stale_pages }}</p>
+        </div>
+    </div>
+
+    <!-- CHARTS -->
+<div class="charts-grid">
+    <div class="chart-box" style="grid-column: span 3;">
+        <h3>Engagement Trends (Daily)</h3>
+        <canvas id="engagementChart"></canvas>
+    </div>
+</div>
+
+
+    <!-- TABLE -->
+    <div class="table-wrapper">
+        <h2>Page Engagement</h2>
+        <table class="listing">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Views</th>
+                    <th>Likes</th>
+                    <th>Comments</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in table %}
+                <tr>
+                    <td>{{ row.title }}</td>
+                    <td>{{ row.views }}</td>
+                    <td>{{ row.likes }}</td>
+                    <td>{{ row.comments }}</td>
+                    <td>{{ row.updated_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <a href="{% url 'dashboard_export_csv' %}" class="button">⬇ Export CSV</a>
+    </div>
+
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    const viewsData = {{ views|safe }};
+    const likesData = {{ likes|safe }};
+    const commentsData = {{ comments|safe }};
+    const labels = {{ labels|safe }};
+
+    new Chart(document.getElementById("engagementChart"), {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Views",
+                    data: viewsData,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: "Likes",
+                    data: likesData,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                },
+                {
+                    label: "Comments",
+                    data: commentsData,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.3
+                }
+            ]
+        }
+    });
+</script>
+
+
+<style>
+/* Dark Mode Aware */
+.w-text { color: var(--w-color-text); }
+
+/* Filters */
+.filter-panel {
+    margin-bottom: 20px;
+    background: var(--w-color-surface);
+    padding: 15px;
+    border-radius: 8px;
+}
+.filter-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+/* KPI Cards */
+.grid {
+    display: grid;
+    gap: 15px;
+    grid-template-columns: repeat(4, 1fr);
+    margin-top: 20px;
+}
+.card {
+    background: var(--w-color-surface);
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+    border: 1px solid var(--w-color-border);
+}
+.card h3 { margin-bottom: 10px; }
+
+/* Charts */
+.charts-grid {
+    margin-top: 40px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+.chart-box {
+    background: var(--w-color-surface);
+    padding: 20px;
+    border-radius: 10px;
+    border: 1px solid var(--w-color-border);
+}
+
+/* Table */
+.table-wrapper {
+    margin-top: 40px;
+}
+.listing {
+    width: 100%;
+    border-collapse: collapse;
+}
+.listing th, .listing td {
+    padding: 10px;
+    border-bottom: 1px solid var(--w-color-border);
+}
+</style>
+{% endblock %}
