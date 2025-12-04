@@ -31,6 +31,8 @@ WORKDIR /app
 
 # Ensure wagtail user owns this folder
 RUN chown wagtail:wagtail /app
+RUN mkdir -p /app/media
+RUN chown -R wagtail:wagtail /app/media
 
 # Copy project
 COPY --chown=wagtail:wagtail . .
