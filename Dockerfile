@@ -28,9 +28,10 @@ RUN pip install -r /requirements.txt
 
 # Set working directory
 WORKDIR /app
-RUN mkdir -p /app/media/images
-RUN mkdir -p /app/media/images_renditions
 
+# Ensure wagtail user owns this folder
+RUN chown wagtail:wagtail /app
+RUN mkdir -p /app/media
 RUN chown -R wagtail:wagtail /app/media
 
 # Copy project
@@ -55,4 +56,4 @@ CMD set -xe; \
     python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); \
         User.objects.filter(username='admin').exists() or \
         User.objects.create_superuser('admin','admin@example.com','Admin@123')"; \
-    gunicorn mysite.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}
+    gunicorn mysite.asgi:application -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT}  
