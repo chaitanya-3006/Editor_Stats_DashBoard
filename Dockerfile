@@ -4,12 +4,12 @@ FROM python:3.12-slim-bookworm
 # Add wagtail user
 RUN useradd wagtail
 
-# Render will provide PORT dynamically
+# Render will provide PORT dynamically (default 10000)
 ENV PYTHONUNBUFFERED=1 \
     PORT=10000 \
     DJANGO_SETTINGS_MODULE=mysite.settings.production
 
-# Install system dependencies
+# Install dependencies for Django/Wagtail
 RUN apt-get update --yes --quiet && apt-get install --yes --quiet --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -26,25 +26,30 @@ RUN pip install "gunicorn==23.0.0" uvicorn
 COPY requirements.txt /
 RUN pip install -r /requirements.txt
 
-# Working directory
+# Set working directory
 WORKDIR /app
-
-# FIX ⭐ Create media directory and subfolders
-RUN mkdir -p /app/media
 RUN mkdir -p /app/media/images
 RUN mkdir -p /app/media/images_renditions
+
 RUN chown -R wagtail:wagtail /app/media
 
-# Copy project files
+# Copy project
 COPY --chown=wagtail:wagtail . .
 
 # Switch to wagtail user
 USER wagtail
 
-# Collect static
+# Collect static files
 RUN python manage.py collectstatic --noinput --clear
 
-# Runtime commands
+# --------------------------
+# ✔ SUPERUSER CREATION MOVED INTO CMD
+# --------------------------
+
+# Runtime command:
+# 1. migrate
+# 2. create superuser if missing
+# 3. run server
 CMD set -xe; \
     python manage.py migrate --noinput; \
     python manage.py shell -c "from django.contrib.auth import get_user_model; User=get_user_model(); \
