@@ -8,12 +8,7 @@ from django.db.models import F
 
 
 class BlogPage(Page):
-    cover_image = models.ForeignKey(
-        "wagtailimages.Image",
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name="+"
-    )
+
 
     body = RichTextField(blank=True)
 
@@ -23,7 +18,6 @@ class BlogPage(Page):
     comments_count = models.PositiveIntegerField(default=0)
 
     content_panels = Page.content_panels + [
-        FieldPanel("cover_image"),
         FieldPanel("body"),
     ]
 
